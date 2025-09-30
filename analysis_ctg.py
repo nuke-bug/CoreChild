@@ -322,6 +322,10 @@ class CTGAnalyzer:
         self.time_history: List[float] = []
         self.baseline_history: List[float] = []
         self.vsr_history: List[float] = []
+        
+        # Начальное значение baseline (медиана первых валидных значений)
+        self.initial_baseline: Optional[float] = None
+        self.initial_baseline_calculated: bool = False
     
     def filter_artifact(self, time: float, bpm_raw: float) -> float:
         """
@@ -384,6 +388,34 @@ class CTGAnalyzer:
               (time - self.vsr_buffer[0][0]) > self.config.vsr_window:
             self.vsr_buffer.popleft()
     
+    def calculate_initial_baseline(self, df: pd.DataFrame) -> float:
+        """
+        Вычисляет начальный baseline из первых валидных значений.
+        
+        Args:
+            df: DataFrame с данными
+            
+        Returns:
+            Начальное значение baseline
+        """
+        # Берем первые 60 секунд или 20 точек данных
+        initial_data = df.head(min(60, len(df)))
+        
+        # Фильтруем валидные значения
+        valid_values = initial_data[
+            (initial_data['value'] >= self.config.bpm_min) & 
+            (initial_data['value'] <= self.config.bpm_max)
+        ]['value']
+        
+        if len(valid_values) >= 5:
+            # Используем медиану для устойчивости к выбросам
+            return float(np.median(valid_values))
+        elif len(valid_values) > 0:
+            return float(np.mean(valid_values))
+        else:
+            # Если все значения невалидны, используем среднее из всех
+            return float(np.median(initial_data['value']))
+    
     def calculate_baseline(self) -> float:
         """Вычисляет текущий baseline."""
         if self.current_event is None:
@@ -394,8 +426,11 @@ class CTGAnalyzer:
             elif len(self.baselines) > 0:
                 # Если буфер пуст (все значения выходили за пределы), берем предыдущее
                 baseline = self.baselines[-1]
+            elif self.initial_baseline is not None:
+                # Используем начальный baseline
+                baseline = self.initial_baseline
             else:
-                # Первая точка, берем значение по умолчанию
+                # Значение по умолчанию
                 baseline = 140.0
             
             self.event_baseline = baseline
@@ -728,6 +763,11 @@ class CTGAnalyzer:
         """
         df = df.sort_values('time_sec').copy()
         
+        # Вычисляем начальный baseline один раз
+        if not self.initial_baseline_calculated:
+            self.initial_baseline = self.calculate_initial_baseline(df)
+            self.initial_baseline_calculated = True
+        
         # Построчная обработка
         for idx, row in df.iterrows():
             time = row['time_sec']
@@ -780,8 +820,8 @@ class CTGAnalyzer:
         df['acceleration'] = self.acc_flags
         df['deceleration'] = self.dec_flags
         df['hypoxia'] = self.hypoxia_statuses
-        df['baseline_status'] = self.baseline_statuses
-        df['vsr_status'] = self.vsr_statuses
+        df['basal_status'] = self.baseline_statuses
+        df['hrv_status'] = self.vsr_statuses
         df['decel_status'] = self.decel_statuses
         df['accel_status'] = self.accel_statuses
         
@@ -814,18 +854,22 @@ class CTGAnalyzer:
         return df
 
 
-def plot_ctg_analysis(df: pd.DataFrame, 
-                     events: List[Tuple[float, float, float, float, str]],
-                     figsize: Tuple[int, int] = (15, 10)) -> None:
+def plot_ctg_analysis(
+    df: pd.DataFrame,
+    df_uterus: pd.DataFrame,
+    events: List[Tuple[float, float, float, float, str]],
+    figsize: Tuple[int, int] = (15, 12)
+) -> None:
     """
     Визуализирует результаты анализа CTG.
     
     Args:
         df: DataFrame с результатами анализа
+        df_uterus: DataFrame с данными маточных сокращений
         events: Список найденных событий
         figsize: Размер фигуры
     """
-    fig, (ax1, ax2, ax3) = plt.subplots(3, 1, figsize=figsize, sharex=True)
+    fig, (ax1, ax2, ax3, ax4) = plt.subplots(4, 1, figsize=figsize, sharex=True)
     
     # График FHR и baseline
     ax1.plot(df['time'], df['bpm'], color='blue', label='FHR', linewidth=1)
@@ -857,6 +901,22 @@ def plot_ctg_analysis(df: pd.DataFrame,
     ax2.set_title('FHR Variability', fontsize=12, fontweight='bold')
     ax2.grid(True, alpha=0.3)
     
+    # График маточных сокращений
+    if df_uterus is not None and not df_uterus.empty:
+        # Проверяем наличие нужных колонок
+        time_col = 'time_sec' if 'time_sec' in df_uterus.columns else df_uterus.columns[0]
+        value_col = 'value' if 'value' in df_uterus.columns else df_uterus.columns[1]
+        
+        ax3.plot(df_uterus[time_col], df_uterus[value_col], 
+                color='purple', label='Uterine Contractions', linewidth=1)
+        ax3.fill_between(df_uterus[time_col], df_uterus[value_col], 
+                         alpha=0.3, color='purple')
+    
+    ax3.set_ylabel('TOCO', fontsize=11)
+    ax3.legend(loc='best')
+    ax3.set_title('Uterine Contractions', fontsize=12, fontweight='bold')
+    ax3.grid(True, alpha=0.3)
+    
     # График статуса гипоксии
     status_map = {'normal': 0, 'suspicious': 1, 'pathological': 2}
     status_numeric = df['hypoxia'].map(status_map)
@@ -865,23 +925,21 @@ def plot_ctg_analysis(df: pd.DataFrame,
     for status, color in colors.items():
         mask = df['hypoxia'] == status
         if mask.any():
-            ax3.scatter(df.loc[mask, 'time'], 
+            ax4.scatter(df.loc[mask, 'time'], 
                        status_numeric[mask],
                        c=color, label=status.capitalize(), 
                        s=1, alpha=0.6)
     
-    ax3.set_ylabel('Hypoxia Status', fontsize=11)
-    ax3.set_xlabel('Time (s)', fontsize=11)
-    ax3.set_yticks([0, 1, 2])
-    ax3.set_yticklabels(['Normal', 'Suspicious', 'Pathological'])
-    ax3.legend(loc='best')
-    ax3.set_title('Hypoxia Status', fontsize=12, fontweight='bold')
-    ax3.grid(True, alpha=0.3)
+    ax4.set_ylabel('Hypoxia Status', fontsize=11)
+    ax4.set_xlabel('Time (s)', fontsize=11)
+    ax4.set_yticks([0, 1, 2])
+    ax4.set_yticklabels(['Normal', 'Suspicious', 'Pathological'])
+    ax4.legend(loc='best')
+    ax4.set_title('Hypoxia Status', fontsize=12, fontweight='bold')
+    ax4.grid(True, alpha=0.3)
     
     plt.tight_layout()
     plt.show()
-
-
 
 
 def main(
@@ -892,13 +950,13 @@ def main(
 ):
     """
     Основная функция для запуска анализа.
-
+    
     Args:
         df_bpm: DataFrame с данными ЧСС (колонки 'time_sec' и 'value')
         df_uterus: DataFrame с данными маточных сокращений (опционально)
         model_path: Путь к файлу модели прогнозирования
         scaler_path: Путь к файлу scaler
-
+    
     Returns:
         DataFrame с результатами анализа
     """
@@ -906,11 +964,11 @@ def main(
     required_columns = {'time_sec', 'value'}
     if not required_columns.issubset(df_bpm.columns):
         raise ValueError(f"DataFrame должен содержать колонки: {required_columns}")
-
+    
     # Загрузка модели прогнозирования
     device = "cuda" if torch.cuda.is_available() else "cpu"
     hypoxia_model, hypoxia_scaler = load_hypoxia_model(model_path, scaler_path, device)
-
+    
     # Создание анализатора и выполнение анализа
     analyzer = CTGAnalyzer(
         df_uterus=df_uterus,
@@ -919,18 +977,21 @@ def main(
         device=device
     )
     df_result = analyzer.analyze(df_bpm)
-
-    # Визуализация (опционально)
-    # plot_ctg_analysis(df_result, analyzer.events)
-    # print(df_result.head(50), df_result.tail(50))
+    
+    # Визуализация
+    # plot_ctg_analysis(df_result, df_uterus, analyzer.events)
+    
+    # Вывод результатов
+    # print(df_result.head(20), df_result.tail(20))
+    
     return df_result
 
 
 if __name__ == "__main__":
     # Пример использования
-    df_bpm = pd.read_csv('1_bpm.csv')
-    df_uterus = pd.read_csv('1_uterus.csv')
-
+    df_bpm = pd.read_csv('2_bpm.csv')
+    df_uterus = pd.read_csv('2_uterus.csv')
+    
     df_bpm.columns = ["time_sec", "value"]
     df_uterus.columns = ["time_sec", "value"]
 
