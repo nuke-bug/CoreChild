@@ -31,131 +31,93 @@ interface KTGChartsProps {
   fetusData: FetusData[];
   uterusData: UterusData[];
   height?: number;
-  timeWindow?: number;
+  timeWindow?: number; // в секундах (30 минут = 1800 секунд)
 }
 
-/**
- * Компонент для отображения графиков КТГ
- * - Верхний график: ЧСС плода (BPM) и базальный ритм
- * - Нижний график: Активность матки
- */
 export const KTGCharts: React.FC<KTGChartsProps> = ({
   fetusData,
   uterusData,
   height = 300,
-  timeWindow = 1800
+  timeWindow = 1800 // 30 минут в секундах
 }) => {
-  // const chartRef = useRef<ChartJS>(null);
 
-// ✅ ДИНАМИЧЕСКАЯ ОСЬ X: вычисляем границы на основе данных
-  const dynamicXAxis = useMemo(() => {
-    if (fetusData.length === 0 && uterusData.length === 0) {
-      return { min: 0, max: timeWindow };
+  // ✅ ФИКСИРОВАННАЯ ОСЬ X: ВСЕГДА от 0 до timeWindow
+  const FIXED_X_AXIS = {
+    min: 0,
+    max: timeWindow
+  };
+
+  // ✅ ПРЕОБРАЗОВАНИЕ ВРЕМЕНИ: сдвигаем данные в фиксированное окно
+  const transformDataToFixedAxis = (data: FetusData[] | UterusData[]) => {
+    if (data.length === 0) return [];
+
+    const latestTime = data[data.length - 1]?.time || 0;
+    
+    // Вычисляем смещение времени
+    const timeOffset = Math.max(0, latestTime - timeWindow);
+    
+    return data
+      .filter(item => item && typeof item.time === 'number')
+      .map(item => ({
+        ...item,
+        // ✅ ПРЕОБРАЗОВАННОЕ ВРЕМЯ: сдвигаем в фиксированное окно [0...timeWindow]
+        transformedTime: Math.max(0, item.time - timeOffset)
+      }))
+      .filter(item => item.transformedTime <= timeWindow); // Отсекаем данные за пределами окна
+  };
+
+  // ✅ ПРЕОБРАЗОВАННЫЕ ДАННЫЕ С ФИКСИРОВАННЫМ ВРЕМЕНЕМ
+  const transformedFetusData = useMemo(() => 
+    transformDataToFixedAxis(fetusData), 
+    [fetusData, timeWindow]
+  );
+
+  const transformedUterusData = useMemo(() => 
+    transformDataToFixedAxis(uterusData), 
+    [uterusData, timeWindow]
+  );
+
+  // ✅ ФИКСИРОВАННЫЕ ДЕЛЕНИЯ КАЖДЫЕ 5 МИНУТ
+  const fixedTicks = useMemo(() => {
+    const ticks = [];
+    const tickInterval = 300; // 5 минут в секундах
+    
+    // Создаем деления от 0 до timeWindow с шагом 5 минут
+    for (let time = 0; time <= timeWindow; time += tickInterval) {
+      ticks.push(time);
     }
-
-    // Находим максимальное время из всех данных
-    const allTimes = [
-      ...fetusData.map(d => d.time),
-      ...uterusData.map(d => d.time)
-    ].filter(time => typeof time === 'number');
     
-    if (allTimes.length === 0) {
-      return { min: 0, max: timeWindow };
-    }
-
-    const maxTime = Math.max(...allTimes);
-    const minTime = Math.max(0, maxTime - timeWindow);
-
-    return {
-      min: minTime,
-      max: maxTime
-    };
-  }, [fetusData, uterusData, timeWindow]);
-
-  // ✅ ФИЛЬТРАЦИЯ ДАННЫХ: показываем только данные в текущем окне
-  const filteredFetusData = useMemo(() => {
-    return fetusData.filter(item => 
-      item && 
-      typeof item.time === 'number' && 
-      item.time >= dynamicXAxis.min && 
-      item.time <= dynamicXAxis.max
-    );
-  }, [fetusData, dynamicXAxis]);
-
-  const filteredUterusData = useMemo(() => {
-    return uterusData.filter(item => 
-      item && 
-      typeof item.time === 'number' && 
-      item.time >= dynamicXAxis.min && 
-      item.time <= dynamicXAxis.max
-    );
-  }, [uterusData, dynamicXAxis]);
-
-  // // ✅ СОЗДАЕМ ДЕЛЕНИЯ ДЛЯ ОСИ X
-  // const xAxisTicks = useMemo(() => {
-  //   const ticks = [];
-  //   const tickInterval = 30; // Деления каждые 30 секунд
-    
-  //   // Начинаем с округленного значения минимального времени
-  //   let currentTick = Math.floor(dynamicXAxis.min / tickInterval) * tickInterval;
-    
-  //   while (currentTick <= dynamicXAxis.max) {
-  //     ticks.push(currentTick);
-  //     currentTick += tickInterval;
-  //   }
-    
-  //   return ticks;
-  // }, [dynamicXAxis]);
-
-  //   const transformDataToFixedAxis = (data: FetusData[] | UterusData[]) => {
-  //     if (data.length === 0) return [];
-  
-  //     const latestTime = data[data.length - 1]?.time || 0;
-      
-  //     // Вычисляем смещение времени
-  //     const timeOffset = Math.max(0, latestTime - timeWindow);
-      
-  //     return data
-  //       .filter(item => item && typeof item.time === 'number')
-  //       .map(item => ({
-  //         ...item,
-  //         transformedTime: Math.max(0, item.time - timeOffset) // Сдвигаем время
-  //       }))
-  //       .filter(item => item.transformedTime <= timeWindow); // Отсекаем данные за пределами окна
-  //   };
-
-  // const transformedFetusData = transformDataToFixedAxis(fetusData);
-  // const transformedUterusData = transformDataToFixedAxis(uterusData);
+    return ticks;
+  }, [timeWindow]);
 
   // Подготовка данных для графика ЧСС плода
   const fetusChartData = {
-    // labels: fetusData.map(d => d.time),
     datasets: [
       {
         label: 'ЧСС плода (BPM)',
-        data: filteredFetusData.map(d => ({ 
-          x: d.time,
-          y: d.bpm 
+        data: transformedFetusData.map(d => ({ 
+          x: (d as any).transformedTime, // ✅ Используем преобразованное время
+          y: (d as FetusData).bpm 
         })),
         borderColor: 'rgb(75, 192, 192)',
         backgroundColor: 'rgba(75, 192, 192, 0.1)',
         borderWidth: 2,
-        pointRadius: 0, // Убираем точки для лучшей производительности
-        tension: 0.2,   // Легкое сглаживание кривой
+        pointRadius: 0,
+        tension: 0.2,
         yAxisID: 'y',
         fill: true,
       },
       {
         label: 'Базальный ритм',
-        data: filteredFetusData.map(d => ({ 
-          x: d.time, // ✅ Используем реальное время
-          y: d.basal_rhythm 
+        data: transformedFetusData.map(d => ({ 
+          x: (d as any).transformedTime, // ✅ Используем преобразованное время
+          y: (d as FetusData).basal_rhythm 
         })),
         borderColor: 'rgb(255, 99, 132)',
         backgroundColor: 'rgba(255, 99, 132, 0.1)',
         borderWidth: 1,
         pointRadius: 0,
-        borderDash: [5, 5], // Пунктирная линия
+        borderDash: [5, 5],
         tension: 0.2,
         yAxisID: 'y',
       }
@@ -164,13 +126,12 @@ export const KTGCharts: React.FC<KTGChartsProps> = ({
 
   // Подготовка данных для графика активности матки
   const uterusChartData = {
-    // labels: uterusData.map(d => d.time),
     datasets: [
       {
         label: 'Активность матки',
-        data: filteredUterusData.map(d => ({ 
-          x: d.time, // ✅ Используем реальное время
-          y: d.power 
+        data: transformedUterusData.map(d => ({ 
+          x: (d as any).transformedTime, // ✅ Используем преобразованное время
+          y: (d as UterusData).power 
         })),
         borderColor: 'rgb(153, 102, 255)',
         backgroundColor: 'rgba(153, 102, 255, 0.1)',
@@ -183,17 +144,13 @@ export const KTGCharts: React.FC<KTGChartsProps> = ({
     ]
   };
 
-  // Общие настройки для графиков
+  // ✅ ОБЩИЕ НАСТРОЙКИ С АБСОЛЮТНО ФИКСИРОВАННОЙ ОСЬЮ X
   const commonOptions: ChartOptions<'line'> = {
     responsive: true,
     maintainAspectRatio: false,
     animation: {
-      duration: 0 // Отключаем анимацию для реального времени
+      duration: 0
     },
-    // interaction: {
-    //   mode: 'dataset',
-    //   intersect: false,
-    // },
     scales: {
       x: {
         type: 'linear',
@@ -201,17 +158,20 @@ export const KTGCharts: React.FC<KTGChartsProps> = ({
           display: true,
           text: 'Время (минуты)'
         },
-        min: dynamicXAxis.min,
-        max: dynamicXAxis.max,
+        // ✅ АБСОЛЮТНО ФИКСИРОВАННЫЕ ГРАНИЦЫ - НИКОГДА НЕ МЕНЯЮТСЯ
+        min: FIXED_X_AXIS.min,
+        max: FIXED_X_AXIS.max,
         ticks: {
-          stepSize: 60, // Деления каждые 30 секунд
+          // ✅ ФИКСИРОВАННЫЕ ДЕЛЕНИЯ КАЖДЫЕ 5 МИНУТ
+          stepSize: 300, // 5 минут в секундах
           callback: function(value) {
-            // Форматируем время в минуты:секунды
+            // Форматируем время в минуты
             const totalSeconds = Number(value);
             const minutes = Math.floor(totalSeconds / 60);
-            const seconds = Math.floor(totalSeconds % 60);
-            return `${minutes}:${seconds.toString().padStart(2, '0')}`;
-          }
+            return `${minutes} мин`;
+          },
+          autoSkip: false,
+          maxTicksLimit: 7
         },
         grid: {
           color: 'rgba(0, 0, 0, 0.1)'
@@ -230,20 +190,6 @@ export const KTGCharts: React.FC<KTGChartsProps> = ({
       },
       tooltip: {
         enabled: false
-        // mode: 'index',
-        // intersect: false,
-        // callbacks: {
-        //   title: (items) => {
-        //     // Показываем реальное время в tooltip
-        //     const transformedTime = items[0].parsed.x;
-        //     const latestTime = fetusData.length > 0 ? fetusData[fetusData.length - 1].time : 0;
-        //     const realTime = latestTime - (timeWindow - transformedTime);
-            
-        //     const minutes = Math.floor(realTime / 60);
-        //     const seconds = Math.floor(realTime % 60);
-        //     return `Время: ${minutes}:${seconds.toString().padStart(2, '0')}`;
-        //   }
-        // }
       }
     }
   };
@@ -255,8 +201,8 @@ export const KTGCharts: React.FC<KTGChartsProps> = ({
       ...commonOptions.scales,
       y: {
         ...commonOptions.scales?.y,
-        min: 50,   // Минимальная ЧСС
-        max: 210,  // Максимальная ЧСС
+        min: 50,
+        max: 210,
         title: {
           display: true,
           text: 'ЧСС (уд/мин)'
@@ -272,8 +218,8 @@ export const KTGCharts: React.FC<KTGChartsProps> = ({
       ...commonOptions.scales,
       y: {
         ...commonOptions.scales?.y,
-        min: 0,    // Минимальная активность
-        max: 100,  // Максимальная активность
+        min: 0,
+        max: 100,
         title: {
           display: true,
           text: 'Активность (%)'
@@ -301,6 +247,7 @@ export const KTGCharts: React.FC<KTGChartsProps> = ({
           options={uterusChartOptions}
         />
       </div>
+      <div>{ fixedTicks }</div>
     </div>
   );
 };

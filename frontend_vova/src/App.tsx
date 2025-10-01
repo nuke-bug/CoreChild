@@ -2,7 +2,7 @@
 import { KTGCharts } from "./components/KTGCharts"
 import { MetricsPanel } from './components/MetricsPanel';
 import { ConnectionStatus } from './components/StatusPanel';
-// import { useWebSocket } from './hooks/useWebSocket';
+import { StartButton } from './components/StartButton';
 import { useWebSocket } from "./hooks/useWebSocket";
 import './App.css';
 
@@ -18,7 +18,9 @@ import './App.css';
 
 function App() {
   const fetusWsUrl = 'ws://10.0.0.3:8000/ws/fetus';
-  const uterusWsUrl = 'ws://10.0.0.3:8000/ws/uterus';
+  const uterusWsUrl = 'ws://10.0.0.3:8000//ws/uterus';
+  // const fetusWsUrl = 'ws://localhost:9009/ws/fetus';
+  // const uterusWsUrl = 'ws://localhost:9009/ws/uterus';
   
   const {
     fetusData,
@@ -27,7 +29,6 @@ function App() {
     isFetusConnected,
     isUterusConnected,
     error,
-    // clearData,
     fetusDataPoints,
     uterusDataPoints
   } = useWebSocket(fetusWsUrl, uterusWsUrl);
@@ -56,6 +57,7 @@ function App() {
         {/* Правая колонка - панели */}
         <aside className="sidebar">
           {/* Статус подключения */}
+          <StartButton/>
           <ConnectionStatus
             isConnected={isFetusConnected}
             lastUpdate={lastUpdate}
@@ -72,31 +74,8 @@ function App() {
 
           {/* Метрики плода */}
           <MetricsPanel latestFetusData={latestFetusData} />
-
-          {/* Панель управления */}
-          {/* <div className="control-panel">
-            <h3>Управление</h3>
-            <button
-              onClick={clearData}
-              disabled={dataPointsCount === 0}
-              className="btn-clear"
-            >
-              🗑️ Очистить данные
-            </button>
-            <div className="connection-info">
-              Подключение: {wsUrl}
-            </div>
-          </div> */}
         </aside>
       </main>
-
-      {/* Футер */}
-      {/* <footer className="app-footer">
-        <div className="footer-content">
-          <span>КТГ Монитор v1.0</span>
-          <span>Режим реального времени</span>
-        </div>
-      </footer> */}
     </div>
   );
 }

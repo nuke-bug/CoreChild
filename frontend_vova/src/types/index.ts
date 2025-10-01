@@ -25,7 +25,6 @@ export interface FetusData {
 export interface UterusData {
   time: number;
   power: number;
-  contraction: boolean;
   timestamp: string;
   type: 'uterus';
 }
