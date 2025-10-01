@@ -1,5 +1,5 @@
 // src/App.tsx
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { KTGCharts } from "./components/KTGCharts"
 import { MetricsPanel } from './components/MetricsPanel';
 import { ConnectionStatus } from './components/StatusPanel';
@@ -26,7 +26,6 @@ function App() {
     lastUpdate,
     isConnected,
     error,
-    clearData,
     dataPointsCount
   } = useWebSocket(wsUrl, 600); // Храним до 600 точек данных (5 минут при 2 обновлениях в секунду)
 
@@ -65,7 +64,7 @@ function App() {
           <MetricsPanel latestFetusData={latestFetusData} />
 
           {/* Панель управления */}
-          <div className="control-panel">
+          {/* <div className="control-panel">
             <h3>Управление</h3>
             <button
               onClick={clearData}
@@ -77,17 +76,17 @@ function App() {
             <div className="connection-info">
               Подключение: {wsUrl}
             </div>
-          </div>
+          </div> */}
         </aside>
       </main>
 
       {/* Футер */}
-      <footer className="app-footer">
+      {/* <footer className="app-footer">
         <div className="footer-content">
           <span>КТГ Монитор v1.0</span>
           <span>Режим реального времени</span>
         </div>
-      </footer>
+      </footer> */}
     </div>
   );
 }

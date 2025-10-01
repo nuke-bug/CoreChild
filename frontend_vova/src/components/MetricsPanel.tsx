@@ -1,6 +1,6 @@
 // src/components/panels/MetricsPanel.tsx
 import React from 'react';
-import { FetusData, StatusType } from '../types/index';
+import {type FetusData, type StatusType } from '../types/index';
 
 interface MetricsPanelProps {
   latestFetusData: FetusData | null;

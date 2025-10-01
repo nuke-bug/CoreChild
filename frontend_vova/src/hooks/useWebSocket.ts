@@ -1,6 +1,6 @@
 // src/hooks/useWebSocket.ts
 import { useState, useEffect, useCallback } from 'react';
-import { KTGData, FetusData, UterusData } from '../types/index';
+import { type KTGData, type FetusData, type UterusData } from '../types/index';
 import { websocketService } from '../servicces/websocketService';
 
 /**

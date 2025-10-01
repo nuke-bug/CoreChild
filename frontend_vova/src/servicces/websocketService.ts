@@ -1,5 +1,5 @@
 // src/services/websocketService.ts
-import { KTGData } from "../types/index";
+import { type KTGData } from "../types/index";
 
 class WebSocketService {
   private ws: WebSocket | null = null;

@@ -14,7 +14,6 @@ interface ConnectionStatusProps {
 export const ConnectionStatus: React.FC<ConnectionStatusProps> = ({
   isConnected,
   lastUpdate,
-  dataPointsCount,
   error
 }) => {
   return (
@@ -26,10 +25,10 @@ export const ConnectionStatus: React.FC<ConnectionStatusProps> = ({
         </span>
       </div>
 
-      <div className="status-row">
+      {/* <div className="status-row">
         <span className="status-label">Точек данных:</span>
         <span className="status-value">{dataPointsCount}</span>
-      </div>
+      </div> */}
 
       <div className="status-row">
         <span className="status-label">Последнее обновление:</span>
