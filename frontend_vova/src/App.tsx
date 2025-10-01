@@ -1,10 +1,10 @@
 // src/App.tsx
-import { useState } from 'react';
 import { KTGCharts } from "./components/KTGCharts"
 import { MetricsPanel } from './components/MetricsPanel';
 import { ConnectionStatus } from './components/StatusPanel';
-import { useWebSocket } from './hooks/useWebSocket';
-import './newApp.css';
+// import { useWebSocket } from './hooks/useWebSocket';
+import { useWebSocket } from "./hooks/useWebSocket";
+import './App.css';
 
 /**
  * Главный компонент приложения мониторинга КТГ
@@ -15,19 +15,22 @@ import './newApp.css';
  * - Отображение текущих метрик и статусов
  * - Управление подключением и данными
  */
+
 function App() {
-  // URL WebSocket сервера (можно вынести в .env)
-  const [wsUrl] = useState('ws://localhost:9009/ws/ktg');
+  const fetusWsUrl = 'ws://localhost:9009/ws/fetus';
+  const uterusWsUrl = 'ws://localhost:9009/ws/uterus';
   
-  // Используем хук для управления WebSocket соединением
   const {
     fetusData,
     uterusData,
     lastUpdate,
-    isConnected,
+    isFetusConnected,
+    isUterusConnected,
     error,
-    dataPointsCount
-  } = useWebSocket(wsUrl, 600); // Храним до 600 точек данных (5 минут при 2 обновлениях в секунду)
+    // clearData,
+    fetusDataPoints,
+    uterusDataPoints
+  } = useWebSocket(fetusWsUrl, uterusWsUrl);
 
   // Получаем последние данные для панели метрик
   const latestFetusData = fetusData.length > 0 ? fetusData[fetusData.length - 1] : null;
@@ -54,9 +57,16 @@ function App() {
         <aside className="sidebar">
           {/* Статус подключения */}
           <ConnectionStatus
-            isConnected={isConnected}
+            isConnected={isFetusConnected}
             lastUpdate={lastUpdate}
-            dataPointsCount={dataPointsCount}
+            dataPointsCount={fetusDataPoints}
+            error={error}
+          />
+
+          <ConnectionStatus
+            isConnected={isUterusConnected}
+            lastUpdate={lastUpdate}
+            dataPointsCount={uterusDataPoints}
             error={error}
           />
 

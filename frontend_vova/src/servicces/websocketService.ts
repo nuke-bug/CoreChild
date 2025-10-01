@@ -1,130 +1,134 @@
 // src/services/websocketService.ts
-import { type KTGData } from "../types/index";
+// import { type FetusData, type UterusData } from '../types/index'
+import { type FetusData, type UterusData } from '../types/index'
 
 class WebSocketService {
-  private ws: WebSocket | null = null;
-  private reconnectAttempts = 0;
+  private fetusWs: WebSocket | null = null;
+  private uterusWs: WebSocket | null = null;
+  private reconnectAttempts = { fetus: 0, uterus: 0 };
   private maxReconnectAttempts = 5;
   private reconnectInterval = 3000;
-  private messageCallbacks: ((data: KTGData) => void)[] = [];
-  private statusCallbacks: ((status: boolean) => void)[] = [];
+  private isManualDisconnect = false;
 
-  /**
-   * Подключение к WebSocket серверу
-   * @param url - URL WebSocket сервера
-   */
+  // Подключение к WebSocket плода
+  connectFetus(url: string, onMessage: (data: FetusData) => void): void {
+    this.connectWebSocket(
+      url, 
+      onMessage, 
+      'fetus',
+      () => this.reconnectFetus(url, onMessage)
+    );
+  }
 
-  
-  connect(url: string): void {
+  // Подключение к WebSocket матки
+  connectUterus(url: string, onMessage: (data: UterusData) => void): void {
+    this.connectWebSocket(
+      url, 
+      onMessage, 
+      'uterus',
+      () => this.reconnectUterus(url, onMessage)
+    );
+  }
+
+  private connectWebSocket(
+    url: string, 
+    onMessage: (data: any) => void,
+    type: 'fetus' | 'uterus',
+    onReconnect: () => void
+  ): void {
     try {
-      console.log(`Connecting to WebSocket: ${url}`);
-      this.ws = new WebSocket(url);
-
-      this.ws.onopen = () => {
-        console.log('WebSocket connected successfully');
-        this.reconnectAttempts = 0;
-        this.notifyStatusChange(true);
+      const ws = new WebSocket(url);
+      
+      ws.onopen = () => {
+        console.log(`✅ ${type} WebSocket connected`);
+        this.reconnectAttempts[type] = 0;
       };
 
-      this.ws.onmessage = (event) => {
+      ws.onmessage = (event) => {
         try {
-          const data: KTGData = JSON.parse(event.data);
-          this.notifyMessageCallbacks(data);
+          const data = JSON.parse(event.data);
+          onMessage(data);
         } catch (error) {
-          console.error('Error parsing WebSocket message:', error);
+          console.error(`Error parsing ${type} WebSocket message:`, error);
         }
       };
 
-      this.ws.onclose = (event) => {
-        console.log(`WebSocket disconnected: ${event.code} - ${event.reason}`);
-        this.notifyStatusChange(false);
-        this.handleReconnect(url);
+      ws.onclose = (event) => {
+        console.log(`🔴 ${type} WebSocket disconnected: ${event.code}`);
+        if (!this.isManualDisconnect) {
+          onReconnect();
+        }
       };
 
-      this.ws.onerror = (error) => {
-        console.error('WebSocket error:', error);
-        this.notifyStatusChange(false);
+      ws.onerror = (error) => {
+        console.error(`💥 ${type} WebSocket error:`, error);
       };
+
+      if (type === 'fetus') {
+        this.fetusWs = ws;
+      } else {
+        this.uterusWs = ws;
+      }
 
     } catch (error) {
-      console.error('WebSocket connection failed:', error);
+      console.error(`💥 ${type} WebSocket connection failed:`, error);
     }
   }
 
-  /**
-   * Обработка переподключения при разрыве соединения
-   */
-  private handleReconnect(url: string): void {
-    if (this.reconnectAttempts < this.maxReconnectAttempts) {
-      this.reconnectAttempts++;
-      console.log(`Reconnecting... Attempt ${this.reconnectAttempts}/${this.maxReconnectAttempts}`);
+  private reconnectFetus(url: string, onMessage: (data: FetusData) => void): void {
+    this.handleReconnect('fetus', url, onMessage);
+  }
+
+  private reconnectUterus(url: string, onMessage: (data: UterusData) => void): void {
+    this.handleReconnect('uterus', url, onMessage);
+  }
+
+  private handleReconnect(
+    type: 'fetus' | 'uterus', 
+    url: string, 
+    onMessage: (data: any) => void
+  ): void {
+    if (this.reconnectAttempts[type] < this.maxReconnectAttempts) {
+      this.reconnectAttempts[type]++;
+      console.log(`🔄 Reconnecting ${type}... Attempt ${this.reconnectAttempts[type]}/${this.maxReconnectAttempts}`);
       
       setTimeout(() => {
-        this.connect(url);
+        if (type === 'fetus') {
+          this.connectFetus(url, onMessage);
+        } else {
+          this.connectUterus(url, onMessage);
+        }
       }, this.reconnectInterval);
     } else {
-      console.error('Maximum reconnection attempts reached');
+      console.error(`❌ Max reconnection attempts reached for ${type}`);
     }
   }
 
-  /**
-   * Отключение от WebSocket сервера
-   */
-  disconnect(): void {
-    if (this.ws) {
-      this.ws.close();
-      this.ws = null;
+  disconnectAll(): void {
+    this.isManualDisconnect = true;
+    if (this.fetusWs) {
+      this.fetusWs.close();
+      this.fetusWs = null;
     }
-    this.reconnectAttempts = 0;
+    if (this.uterusWs) {
+      this.uterusWs.close();
+      this.uterusWs = null;
+    }
+    this.reconnectAttempts = { fetus: 0, uterus: 0 };
   }
 
-  /**
-   * Подписка на получение данных
-   */
-  onMessage(callback: (data: KTGData) => void): void {
-    this.messageCallbacks.push(callback);
+  getFetusStatus(): string {
+    return this.getWebSocketStatus(this.fetusWs);
   }
 
-  /**
-   * Подписка на изменение статуса подключения
-   */
-  onStatusChange(callback: (connected: boolean) => void): void {
-    this.statusCallbacks.push(callback);
+  getUterusStatus(): string {
+    return this.getWebSocketStatus(this.uterusWs);
   }
 
-  /**
-   * Уведомление подписчиков о новых данных
-   */
-  private notifyMessageCallbacks(data: KTGData): void {
-    this.messageCallbacks.forEach(callback => {
-      try {
-        callback(data);
-      } catch (error) {
-        console.error('Error in message callback:', error);
-      }
-    });
-  }
-
-  /**
-   * Уведомление подписчиков об изменении статуса
-   */
-  private notifyStatusChange(connected: boolean): void {
-    this.statusCallbacks.forEach(callback => {
-      try {
-        callback(connected);
-      } catch (error) {
-        console.error('Error in status callback:', error);
-      }
-    });
-  }
-
-  /**
-   * Получение текущего статуса подключения
-   */
-  getStatus(): string {
-    if (!this.ws) return 'DISCONNECTED';
+  private getWebSocketStatus(ws: WebSocket | null): string {
+    if (!ws) return 'DISCONNECTED';
     
-    switch (this.ws.readyState) {
+    switch (ws.readyState) {
       case WebSocket.CONNECTING: return 'CONNECTING';
       case WebSocket.OPEN: return 'CONNECTED';
       case WebSocket.CLOSING: return 'CLOSING';
@@ -134,5 +138,4 @@ class WebSocketService {
   }
 }
 
-// Создаем единственный экземпляр сервиса
 export const websocketService = new WebSocketService();

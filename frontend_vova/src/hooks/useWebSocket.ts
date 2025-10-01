@@ -1,74 +1,68 @@
 // src/hooks/useWebSocket.ts
 import { useState, useEffect, useCallback } from 'react';
-import { type KTGData, type FetusData, type UterusData } from '../types/index';
+import { type FetusData, type UterusData } from '../types/index';
 import { websocketService } from '../servicces/websocketService';
 
-/**
- * Хук для управления WebSocket соединением и данными КТГ
- */
-export const useWebSocket = (url: string, maxDataPoints: number = 600) => {
-  // Состояние приложения
+export const useWebSocket = (fetusUrl: string, uterusUrl: string) => {
   const [fetusData, setFetusData] = useState<FetusData[]>([]);
   const [uterusData, setUterusData] = useState<UterusData[]>([]);
-  const [isConnected, setIsConnected] = useState(false);
+  const [isFetusConnected, setIsFetusConnected] = useState(false);
+  const [isUterusConnected, setIsUterusConnected] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [lastUpdate, setLastUpdate] = useState<Date | null>(null);
 
-  /**
-   * Обработка новых данных от WebSocket
-   */
-  const handleNewData = useCallback((data: KTGData) => {
+  // Обработчик данных плода
+  const handleFetusData = useCallback((data: FetusData) => {
     try {
-      setFetusData(prev => {
-        const newData = [...prev, data.fetus];
-        // Ограничиваем количество точек данных для производительности
-        return newData.slice(-maxDataPoints);
-      });
-
-      setUterusData(prev => {
-        const newData = [...prev, data.uterus];
-        return newData.slice(-maxDataPoints);
-      });
-
+      setFetusData(prev => [...prev, data]);
       setLastUpdate(new Date());
-      setError(null); // Сбрасываем ошибку при успешном получении данных
-      
-    } catch (err) {
-      console.error('Error processing KTG data:', err);
-      setError('Ошибка обработки данных');
-    }
-  }, [maxDataPoints]);
-
-  /**
-   * Обработка изменения статуса подключения
-   */
-  const handleStatusChange = useCallback((connected: boolean) => {
-    setIsConnected(connected);
-    if (!connected) {
-      setError('Потеряно соединение с сервером');
-    } else {
       setError(null);
+    } catch (err) {
+      console.error('Error processing fetus data:', err);
     }
   }, []);
 
-  // Эффект для управления WebSocket соединением
+  // Обработчик данных матки
+  const handleUterusData = useCallback((data: UterusData) => {
+    try {
+      setUterusData(prev => [...prev, data]);
+      setLastUpdate(new Date());
+      setError(null);
+    } catch (err) {
+      console.error('Error processing uterus data:', err);
+    }
+  }, []);
+
+  // Мониторинг статуса соединений
   useEffect(() => {
-    // Подписываемся на события WebSocket
-    websocketService.onMessage(handleNewData);
-    websocketService.onStatusChange(handleStatusChange);
+    const checkConnections = setInterval(() => {
+      setIsFetusConnected(websocketService.getFetusStatus() === 'CONNECTED');
+      setIsUterusConnected(websocketService.getUterusStatus() === 'CONNECTED');
+      
+      if (!isFetusConnected && !isUterusConnected) {
+        setError('Нет подключения к серверу КТГ');
+      } else {
+        setError(null);
+      }
+    }, 1000);
 
-    // Подключаемся к WebSocket
-    websocketService.connect(url);
+    return () => clearInterval(checkConnections);
+  }, [isFetusConnected, isUterusConnected]);
 
-    // Очистка при размонтировании компонента
+  // Подключение WebSocket
+  useEffect(() => {
+    console.log(`🔄 Connecting to WebSockets...`);
+    console.log(`👶 Fetus: ${fetusUrl}`);
+    console.log(`🤰 Uterus: ${uterusUrl}`);
+    
+    websocketService.connectFetus(fetusUrl, handleFetusData);
+    websocketService.connectUterus(uterusUrl, handleUterusData);
+
     return () => {
-      websocketService.disconnect();
+      websocketService.disconnectAll();
     };
-  }, [url, handleNewData, handleStatusChange]);
+  }, [fetusUrl, uterusUrl, handleFetusData, handleUterusData]);
 
-  /**
-   * Очистка данных
-   */
   const clearData = useCallback(() => {
     setFetusData([]);
     setUterusData([]);
@@ -76,19 +70,14 @@ export const useWebSocket = (url: string, maxDataPoints: number = 600) => {
   }, []);
 
   return {
-    // Данные
     fetusData,
     uterusData,
     lastUpdate,
-    
-    // Статус
-    isConnected,
+    isFetusConnected,
+    isUterusConnected,
     error,
-    
-    // Методы
     clearData,
-    
-    // Статистика
-    dataPointsCount: fetusData.length
+    fetusDataPoints: fetusData.length,
+    uterusDataPoints: uterusData.length
   };
 };

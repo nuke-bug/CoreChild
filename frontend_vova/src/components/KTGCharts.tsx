@@ -13,7 +13,7 @@ import {
   TimeScale
 } from 'chart.js';
 import { Line } from 'react-chartjs-2';
-import { type FetusData, type UterusData } from '../types/index';
+import { type FetusData, type UterusData } from '../types';
 
 // Регистрируем необходимые компоненты Chart.js
 ChartJS.register(

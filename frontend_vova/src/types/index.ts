@@ -1,35 +1,33 @@
-// Базовые статусы
+// src/types/index.ts
 export type StatusType = 'normal' | 'suspicious' | 'pathological';
 
 // Данные плода
 export interface FetusData {
-  time: number;           // время в секундах
-  bpm: number;           // ЧСС плода
-  basal_rhythm: number;  // базальный ритм
-  hrv: number;          // вариабельность сердечного ритма
-  acceleration: boolean; // есть акселерация
-  deceleration: boolean; // есть децелерация
-  hypoxia: StatusType;   // статус гипоксии
+  time: number;
+  bpm: number;
+  basal_rhythm: number;
+  hrv: number;
+  acceleration: boolean;
+  deceleration: boolean;
+  hypoxia: StatusType;
   basal_status: StatusType;
   hrv_status: StatusType;
   decel_status: StatusType;
   accel_status: StatusType;
-  hypoxia_15: number | null; // риск гипоксии через 15 мин
-  hypoxia_30: number | null; // риск гипоксии через 30 мин
-  hypoxia_60: number | null; // риск гипоксии через 60 мин
+  hypoxia_15: number | null;
+  hypoxia_30: number | null;
+  hypoxia_60: number | null;
+  timestamp: string;
+  type: 'fetus';
 }
 
 // Данные матки
 export interface UterusData {
-  time: number;      // время в секундах
-  power: number;     // сила сокращения
-  contraction: boolean; // есть сокращение
-}
-
-// Полные данные КТГ
-export interface KTGData {
-  fetus: FetusData;
-  uterus: UterusData;
+  time: number;
+  power: number;
+  contraction: boolean;
+  timestamp: string;
+  type: 'uterus';
 }
 
 // Состояние приложения
@@ -37,6 +35,7 @@ export interface AppState {
   fetusData: FetusData[];
   uterusData: UterusData[];
   lastUpdate: Date | null;
-  isConnected: boolean;
+  isFetusConnected: boolean;
+  isUterusConnected: boolean;
   error: string | null;
 }
