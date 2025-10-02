@@ -1,85 +1,147 @@
-from sqlalchemy import create_engine, Column, Integer, String, Float, DateTime, ForeignKey, Boolean, Text
-from sqlalchemy.orm import declarative_base, sessionmaker, relationship
-from sqlalchemy.dialects.postgresql import UUID
-import uuid
-from datetime import datetime
+from sqlalchemy import Column, Integer, String, Float, Boolean
+from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
+from sqlalchemy.orm import declarative_base
 import time
+import asyncio
 
-# Создаем базовый класс для моделей
+# Базовый класс для ORM-моделей
 Base = declarative_base()
 
 
+class DataForGenerator(Base):
+    __tablename__ = 'data_for_generator'
+
+    source = Column(String(100), primary_key=True, nullable=False)
+    type_ = Column(String(100), primary_key=True, nullable=False)
+    folder = Column(String(100), primary_key=True, nullable=False)
+    id_ = Column(String(100), primary_key=True, nullable=False)
+    is_active = Column(Boolean, default=False)
+    id_patient = Column(Float, primary_key=True, nullable=True)
+
+
 class Interfaces(Base):
-    __tablename__ = 'interfaces'  # источники данных
-    
-    name = Column(String(100), primary_key=True, nullable=False) # имя
-    is_active = Column(Boolean, default=False) # активен ли интерфейс
-    id_patient = Column(Float, nullable=True) # id пациента, выводится при обработке данных на фронт
+    __tablename__ = 'interfaces'
+
+    name = Column(String(100), primary_key=True, nullable=False)
+    is_active = Column(Boolean, default=False)
+    id_patient = Column(Float, nullable=True)
 
 
 class BpmProcessedData(Base):
-    __tablename__ = 'bpm_processed_data'  # таблица с рабочими данными, очищается после каждого пациента
-    
-    time = Column(Float, primary_key=True, nullable=False) # время
-    bpm = Column(Integer, nullable=False) # ЧСС плода (здесь округленное до int число, но в real_data без округления, поэтому там как float)
-    basal_rhythm = Column(Integer, nullable=False) # базальный ритм плода
-    hrv = Column(Integer, nullable=False) # вариабельность сердечного ритма
-    acceleration = Column(Boolean, default=False) # есть или нет акселерация
-    deceleration = Column(Boolean, default=False) # есть или нет децелерация
-    hypoxia = Column(Boolean, default=False) # есть или нет гипоксия сейчас
-    hypoxia_risk = Column(Integer, nullable=True) # вероятность развития гипоксии через 15 минут
-    
-    
+    __tablename__ = 'bpm_processed_data'
+
+    time = Column(Float, primary_key=True, nullable=False)
+    bpm = Column(Integer, primary_key=True, nullable=False)
+
+    displayed = Column(Boolean, default=False)
+    basal_rhythm = Column(Integer, nullable=True)
+    hrv = Column(Integer, nullable=False)
+    acceleration = Column(Boolean, default=True)
+    deceleration = Column(Boolean, default=True)
+    hypoxia = Column(String(100), nullable=True)
+
+    # Статусы по различным метрикам (normal, suspicious, pathological)
+    basal_status = Column(String(100), nullable=True)
+    hrv_status = Column(String(100), nullable=True)
+    decel_status = Column(String(100), nullable=True)
+    accel_status = Column(String(100), nullable=True)
+
+    # Риски гипоксии на разных интервалах (может быть None)
+    hypoxia_15 = Column(Integer, nullable=True, default=None)
+    hypoxia_30 = Column(Integer, nullable=True, default=None)
+    hypoxia_60 = Column(Integer, nullable=True, default=None)
+
+
 class BpmArchiveProcessedData(Base):
-    __tablename__ = 'bpm_archive_processed_data'  # таблица с архивными данными всех пациентов
-    
-    id_patient = Column(Float, nullable=False, primary_key=True) # id пациента, выводится при обработке данных на фронт
-    time = Column(Float) # время
-    bpm = Column(Float, nullable=False) # ЧСС плода (здесь округленное до int число, но в real_data без округления, поэтому там как float)
-    basal_rhythm = Column(Integer, nullable=False) # базальный ритм плода
-    hrv = Column(Integer, nullable=False) # вариабельность сердечного ритма
-    acceleration = Column(Boolean, default=False) # есть или нет акселерация
-    deceleration = Column(Boolean, default=False) # есть или нет децелерация
-    hypoxia = Column(Boolean, default=False) # есть или нет гипоксия сейчас
-    hypoxia_risk = Column(Integer, nullable=True) # вероятность развития гипоксии через 15 минут
-    
+    __tablename__ = 'bpm_archive_processed_data'
+
+    id_patient = Column(Float, primary_key=True, nullable=False)
+    time = Column(Float, primary_key=True, nullable=False)
+    bpm = Column(Float, primary_key=True, nullable=False)
+
 
 class UterusProcessedData(Base):
-    __tablename__ = 'uterus_processed_data'  # таблица с рабочими данными, очищается после каждого пациента
-    
-    time = Column(Float, primary_key=True) # время
-    power = Column(Integer, nullable=False) # сила сокращения
-    contraction = Column(Boolean, default=False) # есть или нет сокращение
-    
-       
-class UterusArchiveProcessedData(Base):
-    __tablename__ = 'uterus_archive_processed_data'  # таблица с архивными данными всех пациентов
+    __tablename__ = 'uterus_processed_data'
 
-    id_patient = Column(Float, nullable=False, primary_key=True) # id пациента, выводится при обработке данных на фронт
-    time = Column(Float) # время
-    power = Column(Integer, nullable=False) # сила сокращения
-    contraction = Column(Boolean, default=False) # есть или нет сокращение
-    
+    time = Column(Float, primary_key=True, nullable=False)
+    power = Column(Integer, primary_key=True, nullable=False)
+
+    displayed = Column(Boolean, default=False)
+
+
+class UterusArchiveProcessedData(Base):
+    __tablename__ = 'uterus_archive_processed_data'
+
+    id_patient = Column(Float, primary_key=True, nullable=False)
+    time = Column(Float, primary_key=True, nullable=False)
+    power = Column(Integer, nullable=False)
+
 
 class DocData(Base):
-    __tablename__ = 'doc_data'   # доп данные обезличенные для анализа важные, таблица с архивными данными всех пациентов
+    __tablename__ = 'doc_data'
 
-    id_patient = Column(Float, nullable=False, primary_key=True) # id пациента, выводится при обработке данных на фронт
-    gestation_week = Column(Integer, nullable=False) # срок беременности, недели
-    gestation_days = Column(Integer, nullable=False) # срок беременности, дни
-    
+    id_patient = Column(Float, primary_key=True, nullable=False)
+    gestation_week = Column(Integer, nullable=False)
+    gestation_days = Column(Integer, nullable=False)
 
-def init_db(db_url='postgresql://pass:pass@10.0.0.4:5432/CORE'):
-    engine = create_engine(db_url)
-    Base.metadata.create_all(bind=engine)
-    SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
-    data = [
-    Interfaces(name = 'usb', is_active = False, id_patient = time.time()),
-    
-    Interfaces(name = 'archive', is_active = False, id_patient = time.time())
-    ]
-    db = SessionLocal()
-    db.add_all(data)
-    db.commit()
-    return engine, SessionLocal
+
+# Глобальные переменные
+async_engine = None
+AsyncSessionLocal = None
+
+
+async def init_db(db_url='postgresql+asyncpg://pass:pass@10.0.0.4:5432/CORE'):
+    """Инициализация базы данных, создание таблиц и начальных данных"""
+    global async_engine, AsyncSessionLocal
+
+    async_engine = create_async_engine(
+        db_url,
+        echo=True,
+        pool_pre_ping=True,
+        pool_recycle=300
+    )
+
+    AsyncSessionLocal = async_sessionmaker(
+        async_engine,
+        class_=AsyncSession,
+        expire_on_commit=False
+    )
+
+    # Пересоздание таблиц
+    async with async_engine.begin() as conn:
+        await conn.run_sync(Base.metadata.drop_all)
+        await conn.run_sync(Base.metadata.create_all)
+
+    # Добавление начального интерфейса
+    async with AsyncSessionLocal() as session:
+        data = [
+            Interfaces(name='archive', is_active=False, id_patient=time.time())
+        ]
+        try:
+            session.add_all(data)
+            await session.commit()
+            print("База данных успешно инициализирована")
+        except Exception as e:
+            await session.rollback()
+            print(f"Ошибка при инициализации базы данных: {e}")
+
+    return async_engine, AsyncSessionLocal
+
+
+async def get_async_db():
+    """Асинхронный генератор сессии для FastAPI зависимостей"""
+    if AsyncSessionLocal is None:
+        raise RuntimeError("База данных не инициализирована")
+
+    async with AsyncSessionLocal() as session:
+        try:
+            yield session
+        finally:
+            await session.close()
+
+
+async def close_db_connection():
+    """Закрытие соединения с базой данных"""
+    if async_engine:
+        await async_engine.dispose()
 

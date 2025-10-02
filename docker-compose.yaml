@@ -1,31 +1,25 @@
 version: '3.8'
 services:
-  # React с Nginx
+  # React
   frontend:
     build:
       context: ./frontend
       dockerfile: Dockerfile.yaml
     ports:
-      - "443:443"
       - "80:80"
-    depends_on:
-      - backend
-    restart: unless-stopped
     
-    # user: "nginx:nginx"  # Запуск от непривилегированного пользователя
-    # read_only: true      # Файловая система только для чтения
-    security_opt:
-      - no-new-privileges:true
     networks:
       CoreChild:
         ipv4_address: 10.0.0.2
-    restart: unless-stopped
     
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:80"]
       interval: 30s
       timeout: 10s
       retries: 3
+    depends_on:
+      bd:
+        condition: service_healthy
       
 
   # Python бэкенд
@@ -35,10 +29,10 @@ services:
       dockerfile: Dockerfile.yaml
     expose:
       - "8000"
+      
     environment:
       - PYTHONUNBUFFERED=1
     restart: unless-stopped
-    
     
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/api/health"]
@@ -53,42 +47,47 @@ services:
     depends_on:
       bd:
         condition: service_healthy
+        
     deploy:
       resources:
         limits:
-          memory: 2048M
-          cpus: '0.5'
+          memory: 7168M
+          cpus: '3.5'
         reservations:
-          memory: 2048M
-          cpus: '1.25'
+          memory: 7168M
+          cpus: '3.5'
+    volumes:
+      - ./backend/sources:/app
       
     
   bd:
     image: postgres:latest
+    
     environment:
       - POSTGRES_USER=pass
       - POSTGRES_PASSWORD=pass
       - POSTGRES_DB=CORE
+      
     networks:
       CoreChild:
         ipv4_address: 10.0.0.4
+        
     restart: unless-stopped
+    
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U pass -d CORE"]
       interval: 5s
       timeout: 5s
       retries: 5
+      
     deploy:
       resources:
         limits:
-          memory: 2048M
+          memory: 1024M
           cpus: '0.5'
         reservations:
-          memory: 2048M
-          cpus: '1.25'
-    # потом добавлю для бд
-    # volumes:
-    #   - ./backend:/app
+          memory: 1024M
+          cpus: '0.5'
 
 networks:
   CoreChild:
@@ -97,6 +96,5 @@ networks:
       driver: default
       config:
         - subnet: 10.0.0.0/24
-
 
 
