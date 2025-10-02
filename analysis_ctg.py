@@ -842,14 +842,14 @@ class CTGAnalyzer:
                 df['hypoxia_60'] = predictions[2]
             else:
                 # Недостаточно данных для прогноза
-                df['hypoxia_15'] = np.nan
-                df['hypoxia_30'] = np.nan
-                df['hypoxia_60'] = np.nan
+                df['hypoxia_15'] = 0
+                df['hypoxia_30'] = 0
+                df['hypoxia_60'] = 0
         else:
             # Модель не загружена
-            df['hypoxia_15'] = np.nan
-            df['hypoxia_30'] = np.nan
-            df['hypoxia_60'] = np.nan
+            df['hypoxia_15'] = 0
+            df['hypoxia_30'] = 0
+            df['hypoxia_60'] = 0
         
         return df
 
