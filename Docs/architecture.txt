@@ -1,0 +1,49 @@
+├── docker-compose.yaml # Конфигурация для сборки и запуска всех сервисов проекта через Docker
+├── backend # Бэкенд-сервис приложения
+│   ├── Dockerfile.yaml # Сборка образа бэкенда 
+│   └── sources
+│       ├── analysis_ctg.py # ML-обработка и анализ кардиотокографических данных
+│       ├── database.py # Модуль для работы с базой данных
+│       ├── generator.py # Генератор реального времени: симуляция работы медицинского оборудования
+│       ├── hypoxiaa # Архивные данные КТГ с признаками гипоксии (для генератора)
+│       ├── main.py # Основной файл приложения: API, WebSocket, инициализация БД и процессов
+│       ├── model_15.h5 # ML-модели для прогнозирования на 15, 30 и 60 минут
+│       ├── model_30.h5
+│       ├── model_60.h5
+│       ├── requirements.txt # Зависимости Python
+│       └── regularr # Архивные данные КТГ без патологий (для генератора)
+├── bd # Сервис базы данных
+│   └── Dockerfile # Сборка образа базы данных
+├── frontend # Фронтенд-приложение
+│   ├── dist # Собранная версия фронтенда (production build)
+│   │   ├── assets
+│   │   │   ├── index-*.js # Бандлы JavaScript 
+│   │   │   ├── index-*.css # Стили 
+│   │   └── index.html
+│   ├── Dockerfile.yaml # Сборка образа фронтенда (исправлено: был .yaml)
+│   ├── eslint.config.js # Конфигурация ESLint
+│   ├── index.html
+│   ├── package.json # Зависимости Node.js
+│   ├── package-lock.json
+│   ├── README.md
+│   ├── src
+│   │   ├── App.css
+│   │   ├── App.tsx # Корневой компонент приложения
+│   │   ├── components
+│   │   │   ├── KTGCharts.tsx # Компоненты для отображения КТГ-графиков
+│   │   │   ├── MetricsPanel.tsx # Панель метрик и показателей
+│   │   │   ├── StartButton.tsx # Кнопка запуска/остановки мониторинга
+│   │   │   └── StatusPanel.tsx # Панель статуса системы
+│   │   ├── hooks
+│   │   │   └── useWebSocket.ts # Кастомный хук для работы WebSocket
+│   │   ├── main.css
+│   │   ├── main.tsx # Точка входа приложения
+│   │   ├── servicces 
+│   │   │   └── websocketService.ts # Сервис для управления WebSocket-соединением
+│   │   └── types
+│   │       └── index.ts # TypeScript-типы
+│   ├── tsconfig.app.json
+│   ├── tsconfig.json
+│   ├── tsconfig.node.json
+│   └── vite.config.ts # Конфигурация Vite
+└── README.md # Инструкция по запуску проекта 

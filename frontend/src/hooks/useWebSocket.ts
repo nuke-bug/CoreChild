@@ -1,7 +1,7 @@
 // src/hooks/useWebSocket.ts
 import { useState, useEffect, useCallback } from 'react';
 import { type FetusData, type UterusData } from '../types/index';
-import { websocketService } from '../servicces/websocketService';
+import { websocketService } from '../services/websocketService';
 
 export const useWebSocket = (fetusUrl: string, uterusUrl: string) => {
   const [fetusData, setFetusData] = useState<FetusData[]>([]);

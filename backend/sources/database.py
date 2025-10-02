@@ -3,7 +3,13 @@ from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sess
 from sqlalchemy.orm import declarative_base
 import time
 import asyncio
+import logging
 
+# Отключаем логи от SQLAlchemy
+logging.getLogger('sqlalchemy.engine').setLevel(logging.WARNING)
+
+# Настраиваем общий уровень логов
+logging.basicConfig(level=logging.INFO)
 # Базовый класс для ORM-моделей
 Base = declarative_base()
 
@@ -74,7 +80,7 @@ class UterusArchiveProcessedData(Base):
 
     id_patient = Column(Float, primary_key=True, nullable=False)
     time = Column(Float, primary_key=True, nullable=False)
-    power = Column(Integer, nullable=False)
+    power = Column(Integer,primary_key=True, nullable=False)
 
 
 class DocData(Base):
@@ -96,7 +102,6 @@ async def init_db(db_url='postgresql+asyncpg://pass:pass@10.0.0.4:5432/CORE'):
 
     async_engine = create_async_engine(
         db_url,
-        echo=True,
         pool_pre_ping=True,
         pool_recycle=300
     )

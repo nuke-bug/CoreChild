@@ -1,8 +1,8 @@
 // src/App.tsx
-import { KTGCharts } from "./components/KTGCharts"
+import { KTGCharts } from "./components/newKTGCharts"
 import { MetricsPanel } from './components/MetricsPanel';
 import { ConnectionStatus } from './components/StatusPanel';
-import { StartButton } from './components/StartButton';
+import { StartButton, StopButton } from './components/StartButton';
 import { useWebSocket } from "./hooks/useWebSocket";
 import './App.css';
 
@@ -18,7 +18,7 @@ import './App.css';
 
 function App() {
   const fetusWsUrl = 'ws://10.0.0.3:8000/ws/fetus';
-  const uterusWsUrl = 'ws://10.0.0.3:8000//ws/uterus';
+  const uterusWsUrl = 'ws://10.0.0.3:8000/ws/uterus';
   // const fetusWsUrl = 'ws://localhost:9009/ws/fetus';
   // const uterusWsUrl = 'ws://localhost:9009/ws/uterus';
   
@@ -28,7 +28,7 @@ function App() {
     lastUpdate,
     isFetusConnected,
     isUterusConnected,
-    error,
+    // error,
     fetusDataPoints,
     uterusDataPoints
   } = useWebSocket(fetusWsUrl, uterusWsUrl);
@@ -38,12 +38,6 @@ function App() {
 
   return (
     <div className="app">
-      {/* Заголовок приложения */}
-      <header className="app-header">
-        <h1> Монитор КТГ</h1>
-      </header>
-
-      {/* Основное содержимое */}
       <main className="main-content">
         {/* Левая колонка - графики */}
         <section className="charts-section">
@@ -56,24 +50,31 @@ function App() {
 
         {/* Правая колонка - панели */}
         <aside className="sidebar">
-          {/* Статус подключения */}
-          <StartButton/>
-          <ConnectionStatus
-            isConnected={isFetusConnected}
-            lastUpdate={lastUpdate}
-            dataPointsCount={fetusDataPoints}
-            error={error}
-          />
-
-          <ConnectionStatus
-            isConnected={isUterusConnected}
-            lastUpdate={lastUpdate}
-            dataPointsCount={uterusDataPoints}
-            error={error}
-          />
-
+          
           {/* Метрики плода */}
           <MetricsPanel latestFetusData={latestFetusData} />
+
+          <div className="connection-container">
+            <div className="buttons-container">
+              <StartButton/>
+              <StopButton/>
+            </div>
+            <div className="connection-status-container">
+              <ConnectionStatus
+                isConnected={isFetusConnected}
+                lastUpdate={lastUpdate}
+                dataPointsCount={fetusDataPoints}
+                type="fetus"
+              />
+
+              <ConnectionStatus
+                isConnected={isUterusConnected}
+                lastUpdate={lastUpdate}
+                dataPointsCount={uterusDataPoints}
+                type="uterus"
+              />
+            </div>
+          </div>
         </aside>
       </main>
     </div>

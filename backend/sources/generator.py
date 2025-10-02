@@ -3,14 +3,67 @@ import os
 import asyncio
 import aiofiles
 import time
-from sqlalchemy import select, update
+from sqlalchemy import select, update, text
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import List, Dict, Any
+import asyncio
 
 from database import (
     DataForGenerator, Interfaces, BpmProcessedData, 
     BpmArchiveProcessedData, UterusProcessedData, UterusArchiveProcessedData
 )
+
+
+STOP_GENERATION = False
+
+import logging
+# Отключаем логи от SQLAlchemy
+logging.getLogger('sqlalchemy.engine').setLevel(logging.WARNING)
+
+async def clean_processed_data_and_stop(AsyncSessionLocal):
+    """Очистка всех таблиц от данных and STOP GENERATION"""
+    
+    global STOP_GENERATION
+    
+    STOP_GENERATION = True
+    
+    await asyncio.sleep(2)
+    
+    async with AsyncSessionLocal() as session:
+        try:
+            # Список таблиц для очистки (учитывайте порядок, если есть внешние ключи)
+            tables = [
+            'bpm_processed_data',
+            'uterus_processed_data',
+            'bpm_archive_processed_data',
+            'uterus_archive_processed_data'
+            ]
+
+            # Отключаем проверку внешних ключей (только для PostgreSQL)
+            await session.execute(text("SET session_replication_role = 'replica';"))
+
+            for table in tables:
+                await session.execute(text(f"DELETE FROM {table};"))  # 
+                print(f"✅ Очищена таблица: {table}")
+
+            # Включаем обратно проверки внешних ключей
+            await session.execute(text("SET session_replication_role = 'origin';"))
+
+            # Деактивируем интерфейс "archive"
+            await session.execute(
+            update(Interfaces)
+            .where(Interfaces.name == 'archive', Interfaces.is_active == True)
+            .values(is_active=False)
+            )
+
+            await session.commit()
+            print("🎉 Все таблицы очищены и интерфейс архив деактивирован!")
+
+        except Exception as e:
+            await session.rollback()
+            print(f"❌ Ошибка при очистке таблиц: {e}")
+
+
 
 class CSVParser:
     def __init__(self, file_path=None):
@@ -114,7 +167,8 @@ async def find_data(AsyncSessionLocal):
 async def generate_bpm(reader: List[Dict], AsyncSessionLocal):
     async with AsyncSessionLocal() as session:
         try:
-            print("Начинаем генерацию BPM данных...")
+            
+            print("✅Начинаем генерацию BPM данных...")
 
             result = await session.execute(
                 select(Interfaces.id_patient).where(Interfaces.name == 'archive')
@@ -128,6 +182,11 @@ async def generate_bpm(reader: List[Dict], AsyncSessionLocal):
             processed_count = 0
 
             for row in reader:
+        
+                if STOP_GENERATION == True:
+                    print("STOP_GENERATION")
+                    return 0
+                    
                 try:
                     time_sec = float(row[0])
                     value = float(row[1])
@@ -185,7 +244,7 @@ async def generate_bpm(reader: List[Dict], AsyncSessionLocal):
 async def generate_uterus(reader: List[Dict], AsyncSessionLocal):
     async with AsyncSessionLocal() as session:
         try:
-            print("Начинаем генерацию uterus данных...")
+            print("✅Начинаем генерацию uterus данных...")
 
             result = await session.execute(
                 select(Interfaces.id_patient).where(Interfaces.name == 'archive')
@@ -199,6 +258,11 @@ async def generate_uterus(reader: List[Dict], AsyncSessionLocal):
             processed_count = 0
 
             for row in reader:
+        
+                if STOP_GENERATION == True:
+                    print("STOP_GENERATION")
+                    return 0
+                    
                 try:
                     time_sec = float(row[0])
                     value = float(row[1])
@@ -296,6 +360,8 @@ async def process_single_row(row: DataForGenerator, AsyncSessionLocal) -> bool:
 
 
 async def start_generation(AsyncSessionLocal):
+    global STOP_GENERATION
+    STOP_GENERATION = False
     async with AsyncSessionLocal() as session:
         try:
             print("=== НАЧАЛО ГЕНЕРАЦИИ ДАННЫХ ===")
@@ -313,7 +379,7 @@ async def start_generation(AsyncSessionLocal):
             await session.execute(update(Interfaces).where(
                 Interfaces.name == 'archive',
                 Interfaces.is_active == False
-            ).values(is_active=True))
+            ).values(is_active=True, id_patient=float(time.time())))
 
             # Выбираем неактивные данные
             result = await session.execute(
@@ -330,7 +396,7 @@ async def start_generation(AsyncSessionLocal):
                 success = await process_single_row(row, AsyncSessionLocal)
                 if success:
                     processed_count += 1
-                break  # FIXME: обрабатывается только одна запись
+                break  # обрабатывается только одна запись
 
             print(f"=== ЗАВЕРШЕНИЕ ГЕНЕРАЦИИ ===")
             print(f"Обработано записей: {processed_count}")
