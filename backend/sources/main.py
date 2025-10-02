@@ -141,7 +141,7 @@ async def websocket_fetus_endpoint(websocket: WebSocket):
                     continue
 
                 for _, row in new_data.iterrows():
-                    if Uterus_Last_stop_time < float(row['time']):
+                    if Bpm_Last_stop_time < float(row['time']):
                         # Отправка клиенту
                         fetus_data = {
                                 "time": float(row['time']),
@@ -163,7 +163,10 @@ async def websocket_fetus_endpoint(websocket: WebSocket):
                         }
 
                         try:
-                            await websocket.send_text(json.dumps(fetus_data))
+                            if Bpm_Last_stop_time < float(row['time']):
+                            
+                                await websocket.send_text(json.dumps(fetus_data))
+                                
                         except RuntimeError as e:
                             print(f"❌ Ошибка отправки WebSocket плода: {e}")
                             break  # выходим из while True
@@ -189,8 +192,9 @@ async def websocket_fetus_endpoint(websocket: WebSocket):
                         ))
 
                         Bpm_Last_stop_time = float(row['time'])
-
+                
                 await session.commit()
+                await asyncio.sleep(1)
 
     except WebSocketDisconnect:
         print("❌ Клиент WebSocket плода отключился")
