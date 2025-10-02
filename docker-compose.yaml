@@ -1,0 +1,100 @@
+version: '3.8'
+services:
+  # React
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.yaml
+    ports:
+      - "80:80"
+    
+    networks:
+      CoreChild:
+        ipv4_address: 10.0.0.2
+    
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:80"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    depends_on:
+      bd:
+        condition: service_healthy
+      
+
+  # Python бэкенд
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.yaml
+    expose:
+      - "8000"
+      
+    environment:
+      - PYTHONUNBUFFERED=1
+    restart: unless-stopped
+    
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      
+    networks:
+      CoreChild:
+        ipv4_address: 10.0.0.3
+    
+    depends_on:
+      bd:
+        condition: service_healthy
+        
+    deploy:
+      resources:
+        limits:
+          memory: 7168M
+          cpus: '3.5'
+        reservations:
+          memory: 7168M
+          cpus: '3.5'
+    volumes:
+      - ./backend/sources:/app
+      
+    
+  bd:
+    image: postgres:latest
+    
+    environment:
+      - POSTGRES_USER=pass
+      - POSTGRES_PASSWORD=pass
+      - POSTGRES_DB=CORE
+      
+    networks:
+      CoreChild:
+        ipv4_address: 10.0.0.4
+        
+    restart: unless-stopped
+    
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U pass -d CORE"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      
+    deploy:
+      resources:
+        limits:
+          memory: 1024M
+          cpus: '0.5'
+        reservations:
+          memory: 1024M
+          cpus: '0.5'
+
+networks:
+  CoreChild:
+    driver: bridge
+    ipam:
+      driver: default
+      config:
+        - subnet: 10.0.0.0/24
+
+

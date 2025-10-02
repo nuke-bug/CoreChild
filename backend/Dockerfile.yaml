@@ -1,0 +1,10 @@
+FROM python:3.12-slim
+    
+WORKDIR /app
+
+COPY ./sources/requirements.txt .
+
+# COPY ./sources .
+#todo rm "COPY ./sources/requirements.txt ./ ", uncomment "# COPY ./sources ."
+RUN pip install --timeout=300 --retries=5 --no-cache-dir -r requirements.txt
+CMD ["python3","main.py"]
