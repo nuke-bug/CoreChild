@@ -299,19 +299,6 @@ export const KTGCharts: React.FC<KTGChartsProps> = ({
       {/* График ЧСС плода */}
       <div className="chart-container" style={{ height }}>
         <h3>Кардиотокограмма - ЧСС плода</h3>
-        {fetusData.length === 0 && (
-          <div style={{ 
-            textAlign: 'center', 
-            color: '#666', 
-            fontStyle: 'italic',
-            marginBottom: '10px'
-          }}>
-            Ожидание данных...
-          </div>
-        )}
-        <div style={{ fontSize: '12px', color: '#666', marginBottom: '5px' }}>
-          Текущее окно: {Math.floor(dynamicXAxis.min / 60)} - {Math.floor(dynamicXAxis.max / 60)} мин
-        </div>
         <Line
           data={fetusChartData}
           options={fetusChartOptions}
@@ -321,19 +308,6 @@ export const KTGCharts: React.FC<KTGChartsProps> = ({
       {/* График активности матки */}
       <div className="chart-container" style={{ height }}>
         <h3>Токограмма - Активность матки</h3>
-        {uterusData.length === 0 && (
-          <div style={{ 
-            textAlign: 'center', 
-            color: '#666', 
-            fontStyle: 'italic',
-            marginBottom: '10px'
-          }}>
-            Ожидание данных...
-          </div>
-        )}
-        <div style={{ fontSize: '12px', color: '#666', marginBottom: '5px' }}>
-          Текущее окно: {Math.floor(dynamicXAxis.min / 60)} - {Math.floor(dynamicXAxis.max / 60)} мин
-        </div>
         <Line
           data={uterusChartData}
           options={uterusChartOptions}
