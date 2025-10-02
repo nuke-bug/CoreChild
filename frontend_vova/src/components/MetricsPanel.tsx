@@ -43,19 +43,19 @@ export const MetricsPanel: React.FC<MetricsPanelProps> = ({ latestFetusData }) =
           <div className="prediction-item">
             {/* <div className="prediction-time">15 минут</div> */}
             <div className="prediction-value">
-              15 мин: {hypoxia_15 !== null ? `${hypoxia_15}%` : '—'}
+              15 мин:  {hypoxia_15}%
             </div>
           </div>
           <div className="prediction-item">
             {/* <div className="prediction-time">30 минут</div> */}
             <div className="prediction-value">
-              30 мин: {hypoxia_30 !== null ? `${hypoxia_30}%` : '—'}
+              30 мин: {hypoxia_30}%
             </div>
           </div>
           <div className="prediction-item">
             {/* <div className="prediction-time">60 минут</div> */}
             <div className="prediction-value">
-              60 мин: {hypoxia_60 !== null ? `${hypoxia_60}%` : '—'}
+              60 мин: {hypoxia_60}%
             </div>
           </div>
         </div>
