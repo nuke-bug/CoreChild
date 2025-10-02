@@ -113,11 +113,11 @@ body {
   background: var(--bg-primary);
 }
 
-.fetus-heart-rate,
+/* .fetus-heart-rate,
 .hypoxia-risk,
 .metric-item {
   border: 2px dotted var(--secondary-color);
-}
+} */
 
 .connection-container {
   display: grid;

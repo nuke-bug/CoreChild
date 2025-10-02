@@ -1,5 +1,5 @@
 // src/App.tsx
-import { KTGCharts } from "./components/KTGCharts"
+import { KTGCharts } from "./components/newKTGCharts"
 import { MetricsPanel } from './components/MetricsPanel';
 import { ConnectionStatus } from './components/StatusPanel';
 import { StartButton, StopButton } from './components/StartButton';
@@ -17,10 +17,10 @@ import './App.css';
  */
 
 function App() {
-  // const fetusWsUrl = 'ws://10.0.0.3:8000/ws/fetus';
-  // const uterusWsUrl = 'ws://10.0.0.3:8000/ws/uterus';
-  const fetusWsUrl = 'ws://localhost:9009/ws/fetus';
-  const uterusWsUrl = 'ws://localhost:9009/ws/uterus';
+  const fetusWsUrl = 'ws://10.0.0.3:8000/ws/fetus';
+  const uterusWsUrl = 'ws://10.0.0.3:8000/ws/uterus';
+  // const fetusWsUrl = 'ws://localhost:9009/ws/fetus';
+  // const uterusWsUrl = 'ws://localhost:9009/ws/uterus';
   
   const {
     fetusData,
