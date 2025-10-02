@@ -34,9 +34,9 @@ export const ConnectionStatus: React.FC<ConnectionStatusProps> = ({
 
   return (
     <div className="connection-status">
-      <div className="connection-label">{config.label}</div>
+      {/* <div className="connection-label">{config.label}</div> */}
       <div className={`connection-indicator ${isConnected ? 'connected' : 'disconnected'}`}>
-        {isConnected ? config.connectedText : config.disconnectedText}
+       {config.label} {isConnected ? config.connectedText : config.disconnectedText}
       </div>
       {/* <div className="status-info">
         {lastUpdate ? lastUpdate.toLocaleTimeString('ru-RU') : '—'}

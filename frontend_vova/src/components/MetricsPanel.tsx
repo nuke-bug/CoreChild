@@ -20,8 +20,8 @@ export const MetricsPanel: React.FC<MetricsPanelProps> = ({ latestFetusData }) =
     bpm,
     basal_rhythm,
     hrv,
-    acceleration,
-    deceleration,
+    // acceleration,
+    // deceleration,
     hypoxia_15,
     hypoxia_30,
     hypoxia_60
@@ -74,7 +74,7 @@ export const MetricsPanel: React.FC<MetricsPanelProps> = ({ latestFetusData }) =
           <span className="metric-value">{hrv}</span>
         </div>
 
-        <div className="metric-item">
+        {/* <div className="metric-item">
           <span className="metric-label">Акцелерация</span>
           <span className="metric-value">
             {acceleration ? 'Есть' : 'Нет'}
@@ -86,7 +86,7 @@ export const MetricsPanel: React.FC<MetricsPanelProps> = ({ latestFetusData }) =
           <span className="metric-value">
             {deceleration ? 'Есть' : 'Нет'}
           </span>
-        </div>
+        </div> */}
       </div>
     </div>
   );

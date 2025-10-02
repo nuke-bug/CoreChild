@@ -18,7 +18,7 @@ import './App.css';
 
 function App() {
   const fetusWsUrl = 'ws://10.0.0.3:8000/ws/fetus';
-  const uterusWsUrl = 'ws://10.0.0.3:8000//ws/uterus';
+  const uterusWsUrl = 'ws://10.0.0.3:8000/ws/uterus';
   // const fetusWsUrl = 'ws://localhost:9009/ws/fetus';
   // const uterusWsUrl = 'ws://localhost:9009/ws/uterus';
   
@@ -51,12 +51,14 @@ function App() {
         {/* Правая колонка - панели */}
         <aside className="sidebar">
           
-          <div className="buttons-container">
-            <StartButton/>
-            <StopButton/>
-          </div>
-          
+          {/* Метрики плода */}
+          <MetricsPanel latestFetusData={latestFetusData} />
 
+          <div className="connection-container">
+            <div className="buttons-container">
+              <StartButton/>
+              <StopButton/>
+            </div>
             <div className="connection-status-container">
               <ConnectionStatus
                 isConnected={isFetusConnected}
@@ -72,10 +74,7 @@ function App() {
                 type="uterus"
               />
             </div>
-          
-
-          {/* Метрики плода */}
-          <MetricsPanel latestFetusData={latestFetusData} />
+          </div>
         </aside>
       </main>
     </div>

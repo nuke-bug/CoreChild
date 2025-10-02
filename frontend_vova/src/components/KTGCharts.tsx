@@ -41,13 +41,11 @@ export const KTGCharts: React.FC<KTGChartsProps> = ({
   timeWindow = 1800 // 30 минут в секундах
 }) => {
 
-  // ✅ ФИКСИРОВАННАЯ ОСЬ X: ВСЕГДА от 0 до timeWindow
   const FIXED_X_AXIS = {
     min: 0,
     max: timeWindow
   };
 
-  // ✅ ПРЕОБРАЗОВАНИЕ ВРЕМЕНИ: сдвигаем данные в фиксированное окно
   const transformDataToFixedAxis = (data: FetusData[] | UterusData[]) => {
     if (data.length === 0) return [];
 
@@ -60,7 +58,6 @@ export const KTGCharts: React.FC<KTGChartsProps> = ({
       .filter(item => item && typeof item.time === 'number')
       .map(item => ({
         ...item,
-        // ✅ ПРЕОБРАЗОВАННОЕ ВРЕМЯ: сдвигаем в фиксированное окно [0...timeWindow]
         transformedTime: Math.max(0, item.time - timeOffset)
       }))
       .filter(item => item.transformedTime <= timeWindow); // Отсекаем данные за пределами окна
@@ -76,7 +73,7 @@ export const KTGCharts: React.FC<KTGChartsProps> = ({
     [uterusData, timeWindow]
   );
 
-  // ✅ ФИКСИРОВАННЫЕ ДЕЛЕНИЯ КАЖДЫЕ 5 МИНУТ
+  //  ФИКСИРОВАННЫЕ ДЕЛЕНИЯ КАЖДЫЕ 5 МИНУТ
   const fixedTicks = useMemo(() => {
     const ticks = [];
     const tickInterval = 300; // 5 минут в секундах
@@ -90,38 +87,76 @@ export const KTGCharts: React.FC<KTGChartsProps> = ({
   }, [timeWindow]);
   
   // Подготовка данных для графика ЧСС плода
-  const fetusChartData = {
-    datasets: [
-      {
-        label: 'ЧСС плода (BPM)',
-        data: transformedFetusData.map(d => ({ 
-          x: (d as any).transformedTime, // ✅ Используем преобразованное время
+const fetusChartData = {
+  datasets: [
+    // Основной график
+    {
+      label: 'ЧСС плода (BPM)',
+      data: transformedFetusData.map(d => ({ 
+        x: (d as any).transformedTime,
+        y: (d as FetusData).bpm 
+      })),
+      borderColor: 'rgb(75, 192, 192)',
+      backgroundColor: 'rgba(75, 192, 192, 0.1)',
+      borderWidth: 2,
+      pointRadius: 0,
+      tension: 0.2,
+      yAxisID: 'y',
+      fill: true,
+    },
+    //  Маркеры акселераций
+    {
+      label: 'Акселерация',
+      data: transformedFetusData
+        .filter(d => (d as FetusData).acceleration)
+        .map(d => ({ 
+          x: (d as any).transformedTime,
           y: (d as FetusData).bpm 
         })),
-        borderColor: 'rgb(75, 192, 192)',
-        backgroundColor: 'rgba(75, 192, 192, 0.1)',
-        borderWidth: 2,
-        pointRadius: 0,
-        tension: 0.2,
-        yAxisID: 'y',
-        fill: true,
-      },
-      {
-        label: 'Базальный ритм',
-        data: transformedFetusData.map(d => ({ 
+      borderColor: 'rgb(76, 175, 80)',
+      backgroundColor: 'rgb(76, 175, 80)',
+      borderWidth: 3,
+      pointRadius: 4,
+      pointStyle: 'line',
+      tension: 0,
+      yAxisID: 'y',
+      showLine: false, // Только точки, без линий
+    },
+    //  Маркеры децелераций
+    {
+      label: 'Децелерация',
+      data: transformedFetusData
+        .filter(d => (d as FetusData).deceleration)
+        .map(d => ({ 
           x: (d as any).transformedTime,
-          y: (d as FetusData).basal_rhythm 
+          y: (d as FetusData).bpm 
         })),
-        borderColor: 'rgb(255, 99, 132)',
-        backgroundColor: 'rgba(255, 99, 132, 0.1)',
-        borderWidth: 1,
-        pointRadius: 0,
-        borderDash: [5, 5],
-        tension: 0.2,
-        yAxisID: 'y',
-      }
-    ]
-  };
+      borderColor: 'rgb(244, 67, 54)',
+      backgroundColor: 'rgb(244, 67, 54)',
+      borderWidth: 3,
+      pointRadius: 4,
+      pointStyle: 'line',
+      tension: 0,
+      yAxisID: 'y',
+      showLine: false, // Только точки, без линий
+    },
+    // Базальный ритм
+    {
+      label: 'Базальный ритм',
+      data: transformedFetusData.map(d => ({ 
+        x: (d as any).transformedTime,
+        y: (d as FetusData).basal_rhythm 
+      })),
+      borderColor: 'rgb(255, 99, 132)',
+      backgroundColor: 'rgba(255, 99, 132, 0.1)',
+      borderWidth: 1,
+      pointRadius: 0,
+      borderDash: [5, 5],
+      tension: 0.2,
+      yAxisID: 'y',
+    }
+  ]
+};
 
   // Подготовка данных для графика активности матки
   const uterusChartData = {
@@ -129,7 +164,7 @@ export const KTGCharts: React.FC<KTGChartsProps> = ({
       {
         label: 'Активность матки',
         data: transformedUterusData.map(d => ({ 
-          x: (d as any).transformedTime, // ✅ Используем преобразованное время
+          x: (d as any).transformedTime, //  Используем преобразованное время
           y: (d as UterusData).power 
         })),
         borderColor: 'rgb(153, 102, 255)',
@@ -143,7 +178,7 @@ export const KTGCharts: React.FC<KTGChartsProps> = ({
     ]
   };
 
-  // ✅ ОБЩИЕ НАСТРОЙКИ С АБСОЛЮТНО ФИКСИРОВАННОЙ ОСЬЮ X
+  //  ОБЩИЕ НАСТРОЙКИ С АБСОЛЮТНО ФИКСИРОВАННОЙ ОСЬЮ X
   const commonOptions: ChartOptions<'line'> = {
     responsive: true,
     maintainAspectRatio: false,
@@ -243,7 +278,7 @@ export const KTGCharts: React.FC<KTGChartsProps> = ({
           options={uterusChartOptions}
         />
       </div>
-      <div>{ fixedTicks }</div>
+      <div className='hidden'>{ fixedTicks }</div>
     </div>
   );
 };

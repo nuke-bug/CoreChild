@@ -82,12 +82,11 @@ body {
   min-width: 0;
 }
 
-/* Боковая панель */
 .sidebar {
   width: var(--sidebar-width);
   display: flex;
   flex-direction: column;
-  gap: 1.5rem;
+  gap: 1rem;
   flex-shrink: 0;
 }
 
@@ -108,18 +107,27 @@ body {
   padding-bottom: 0.5rem;
 }
 
-/* Стили для компонентов боковой панели БЕЗ РАМОК */
+/* Стили для компонентов боковой панели*/
 .connection-status,
-.metrics-panel,
-.control-panel,
-.debug-panel {
+.metrics-panel {
   background: var(--bg-primary);
-  border-radius: var(--border-radius);
+}
+
+.fetus-heart-rate,
+.hypoxia-risk,
+.metric-item {
+  border: 2px dotted var(--secondary-color);
+}
+
+.connection-container {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
 }
 
 .connection-status-container {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
+  display: flex;
+  flex-direction: column;
 }
 
 .connection-status {
@@ -161,21 +169,23 @@ body {
 }
 
 .buttons-container {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 1rem;
+  display: flex;
+  flex-direction: column;
 }
 
 .button-status {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  min-height: auto;
-  border: none;
+    padding: 0px;
+    border-radius: 15px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    text-align: center;
+    min-width: 100px;
+    margin-bottom: 0.5rem;
+    height: 30px;
 }
 
 .start-button, .stop-button {
-    background: var(--success-color);
+    background: var(--info-color);
     color: white;
     padding: 0.4rem 1rem;
     border-radius: 15px;
@@ -184,6 +194,7 @@ body {
     text-align: center;
     min-width: 100px;
     border: none;
+    height: 30px;
 }
 
 .start-button:hover:not(:disabled),
@@ -201,7 +212,9 @@ body {
 .bpm-and-risk {
   display: grid;
   grid-template-columns: 1fr 1fr;
+  gap: 1rem;
 }
+
 .metrics-panel h3 {
   color: var(--text-primary);
   font-size: 1.3rem;
@@ -211,9 +224,8 @@ body {
 
 /* Секция ЧСС плода */
 .fetus-heart-rate {
-  border-radius: 12px;
   padding: 1.5rem;
-  margin-bottom: 1.5rem;
+  margin-bottom: 1rem;
 }
 
 .fetus-heart-rate h4 {
@@ -238,9 +250,8 @@ body {
 }
 
 .hypoxia-risk {
-  border-radius: 12px;
   padding: 1.5rem;
-  margin-bottom: 1.5rem;
+  margin-bottom: 1rem;
 }
 
 .hypoxia-risk h4 {
@@ -265,7 +276,6 @@ body {
 .prediction-item {
   text-align: center;
   padding: 1rem;
-  background: white;
   border-radius: 8px;
   padding: 0px;
 }
@@ -290,10 +300,7 @@ body {
 }
 
 .metric-item {
-  background: white;
-  border-radius: 8px;
-  padding: 1rem;
-  border-left: 4px solid var(--info-color);
+  text-align: center;
 }
 
 .metric-item.abnormal {
@@ -331,17 +338,6 @@ body {
   margin-top: 0.3rem;
 }
 
-.status-normal {
-  background: #c6f6d5;
-  color: #22543d;
-}
-
-.status-warning {
-  background: #fefcbf;
-  color: #744210;
-}
-
-.status-critical {
-  background: #fed7d7;
-  color: #742a2a;
+.hidden {
+  display: none;
 }
