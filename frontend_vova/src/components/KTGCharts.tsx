@@ -66,7 +66,6 @@ export const KTGCharts: React.FC<KTGChartsProps> = ({
       .filter(item => item.transformedTime <= timeWindow); // Отсекаем данные за пределами окна
   };
 
-  // ✅ ПРЕОБРАЗОВАННЫЕ ДАННЫЕ С ФИКСИРОВАННЫМ ВРЕМЕНЕМ
   const transformedFetusData = useMemo(() => 
     transformDataToFixedAxis(fetusData), 
     [fetusData, timeWindow]
@@ -89,7 +88,7 @@ export const KTGCharts: React.FC<KTGChartsProps> = ({
     
     return ticks;
   }, [timeWindow]);
-
+  
   // Подготовка данных для графика ЧСС плода
   const fetusChartData = {
     datasets: [
@@ -110,7 +109,7 @@ export const KTGCharts: React.FC<KTGChartsProps> = ({
       {
         label: 'Базальный ритм',
         data: transformedFetusData.map(d => ({ 
-          x: (d as any).transformedTime, // ✅ Используем преобразованное время
+          x: (d as any).transformedTime,
           y: (d as FetusData).basal_rhythm 
         })),
         borderColor: 'rgb(255, 99, 132)',
@@ -155,14 +154,11 @@ export const KTGCharts: React.FC<KTGChartsProps> = ({
       x: {
         type: 'linear',
         title: {
-          display: true,
+          display: false,
           text: 'Время (минуты)'
         },
-        // ✅ АБСОЛЮТНО ФИКСИРОВАННЫЕ ГРАНИЦЫ - НИКОГДА НЕ МЕНЯЮТСЯ
-        min: FIXED_X_AXIS.min,
         max: FIXED_X_AXIS.max,
         ticks: {
-          // ✅ ФИКСИРОВАННЫЕ ДЕЛЕНИЯ КАЖДЫЕ 5 МИНУТ
           stepSize: 300, // 5 минут в секундах
           callback: function(value) {
             // Форматируем время в минуты

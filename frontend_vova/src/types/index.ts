@@ -14,9 +14,9 @@ export interface FetusData {
   hrv_status: StatusType;
   decel_status: StatusType;
   accel_status: StatusType;
-  hypoxia_15: number | null;
-  hypoxia_30: number | null;
-  hypoxia_60: number | null;
+  hypoxia_15: number;
+  hypoxia_30: number;
+  hypoxia_60: number;
   timestamp: string;
   type: 'fetus';
 }
